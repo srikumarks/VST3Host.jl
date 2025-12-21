@@ -51,23 +51,20 @@ using VST3Host
 # Load a plugin
 plugin = VST3Plugin("/path/to/plugin.vst3", 44100.0, 512)
 
-# Get plugin info
-print_info(plugin)
-
-# List all parameters
-print_parameters(plugin)
+# Display plugin info (automatic in REPL, or use display(plugin))
+plugin  # Shows full info with all parameters
 
 # Set a parameter (normalized 0-1)
-set_parameter!(plugin, 0, 0.5)
+setparameter!(plugin, 0, 0.5)
 
 # Process audio (2 channels × 512 samples)
 input = randn(Float32, 2, 512)
-output = process_block(plugin, input)
+output = process(plugin, input)
 
 # Send MIDI
-send_note_on!(plugin, 0, 60, 100)   # Channel 0, Note 60 (C4), Velocity 100
-output = process_block(plugin, input)
-send_note_off!(plugin, 0, 60)
+noteon(plugin, 0, 60, 100)   # Channel 0, Note 60 (C4), Velocity 100
+output = process(plugin, input)
+noteoff(plugin, 0, 60)
 
 # Cleanup (automatic via finalizer, but can be explicit)
 close(plugin)
@@ -93,7 +90,7 @@ plugin = VST3Plugin("/Library/Audio/Plug-Ins/VST3/Reverb.vst3", 48000.0, 256)
 ```
 
 #### `activate!(plugin)`
-Activate the plugin for audio processing. Called automatically by `process_block`.
+Activate the plugin for audio processing. Called automatically by `process`.
 
 #### `deactivate!(plugin)`
 Deactivate the plugin. Called automatically when closing.
@@ -103,7 +100,7 @@ Cleanup and unload the plugin. Called automatically by garbage collector.
 
 ### Plugin Information
 
-#### `get_info(plugin) -> PluginInfo`
+#### `info(plugin) -> PluginInfo`
 Get basic plugin information.
 
 **Returns:** `PluginInfo` with fields:
@@ -113,12 +110,15 @@ Get basic plugin information.
 - `num_outputs::Int`
 - `num_parameters::Int`
 
-#### `print_info(plugin)`
-Print formatted plugin information.
+#### Display Plugin Info
+Simply type `plugin` in the REPL or use `display(plugin)` to see:
+- Plugin name, vendor, and configuration
+- All parameters with current values and defaults
+- Automatic formatting for terminal or Jupyter notebooks
 
 ### Parameters
 
-#### `get_parameters(plugin) -> Vector{ParameterInfo}`
+#### `parameters(plugin) -> Vector{ParameterInfo}`
 Get information about all parameters.
 
 **Returns:** Vector of `ParameterInfo` with fields:
@@ -131,34 +131,31 @@ Get information about all parameters.
 - `max_value::Float64`: Always 1.0 for VST3
 - `step_count::Int`: Number of steps (0 = continuous)
 
-#### `get_parameter_info(plugin, index) -> ParameterInfo`
+#### `parameterinfo(plugin, index) -> ParameterInfo`
 Get information about a specific parameter by index (0-based).
 
-#### `get_parameter(plugin, param_id) -> Float64`
+#### `getparameter(plugin, param_id) -> Float64`
 Get current parameter value (normalized 0-1).
 
-#### `set_parameter!(plugin, param_id, value)`
+#### `parameter(plugin, param_id) -> Float64`
+Alias for `getparameter`.
+
+#### `setparameter!(plugin, param_id, value)`
 Set parameter value (normalized 0-1).
 
 **Arguments:**
 - `param_id::Int`: Parameter ID
 - `value::Float64`: New value (must be 0.0-1.0)
 
-#### `print_parameters(plugin; show_values=true)`
-Print all parameters with formatting.
-
-#### `format_parameter(param::ParameterInfo, value) -> String`
+#### `formatparameter(param::ParameterInfo, value) -> String`
 Format a parameter value as human-readable string.
 
-#### `is_discrete(param::ParameterInfo) -> Bool`
+#### `isdiscrete(param::ParameterInfo) -> Bool`
 Check if parameter is discrete (vs. continuous).
-
-#### `parameter_value_to_string(plugin, param) -> String`
-Get current parameter value as formatted string.
 
 ### Audio Processing
 
-#### `process_block(plugin, input) -> Matrix{Float32}`
+#### `process(plugin, input) -> Matrix{Float32}`
 Process a block of audio and return output.
 
 **Arguments:**
@@ -175,10 +172,10 @@ Process a block of audio and return output.
 ```julia
 # Process 128 samples
 input = randn(Float32, 2, 128)
-output = process_block(plugin, input)
+output = process(plugin, input)
 ```
 
-#### `process_block!(plugin, input, output)`
+#### `process!(plugin, input, output)`
 Process audio in-place (modifies `output`).
 
 **Arguments:**
@@ -187,41 +184,51 @@ Process audio in-place (modifies `output`).
 
 ### MIDI Events
 
-#### `send_note_on!(plugin, channel, note, velocity, sample_offset=0)`
+#### `noteon(plugin, channel, note, velocity, offset=0)`
 Send MIDI Note On event.
 
 **Arguments:**
 - `channel::Int`: MIDI channel (0-15)
 - `note::Int`: Note number (0-127, where 60 = C4)
 - `velocity::Int`: Note velocity (0-127)
-- `sample_offset::Int`: Sample position in next block (default: 0)
+- `offset::Int`: Sample position in next block (default: 0)
 
 **Example:**
 ```julia
-send_note_on!(plugin, 0, 60, 100)  # C4 at full velocity
+noteon(plugin, 0, 60, 100)  # C4 at full velocity
 ```
 
-#### `send_note_off!(plugin, channel, note, sample_offset=0)`
+#### `noteoff(plugin, channel, note, offset=0)`
 Send MIDI Note Off event.
 
 **Arguments:**
 - `channel::Int`: MIDI channel (0-15)
 - `note::Int`: Note number (0-127)
-- `sample_offset::Int`: Sample position in next block (default: 0)
+- `offset::Int`: Sample position in next block (default: 0)
 
-#### `send_midi_cc!(plugin, channel, cc, value, sample_offset=0)`
-Send MIDI CC (Control Change) event.
+#### `controlchange(plugin, channel, controller, value, offset=0)`
+Send MIDI Control Change (CC) event.
 
 **Arguments:**
 - `channel::Int`: MIDI channel (0-15)
-- `cc::Int`: CC number (0-127)
+- `controller::Int`: CC number (0-127)
 - `value::Int`: CC value (0-127)
-- `sample_offset::Int`: Sample position in next block (default: 0)
+- `offset::Int`: Sample position in next block (default: 0)
 
 **Example:**
 ```julia
-send_midi_cc!(plugin, 0, 1, 64)  # Modulation wheel to 50%
+controlchange(plugin, 0, 1, 64)  # Modulation wheel to 50%
 ```
+
+#### `programchange(plugin, channel, program, offset=0)`
+Send MIDI Program Change event.
+
+**Arguments:**
+- `channel::Int`: MIDI channel (0-15)
+- `program::Int`: Program number (0-127)
+- `offset::Int`: Sample position in next block (default: 0)
+
+**Note:** VST3 plugins may not respond to MIDI program changes. Check for preset parameters and use `setparameter!` if available.
 
 ## Examples
 
@@ -239,7 +246,7 @@ See the `examples/` directory for complete examples:
 block_size = 256
 for i in 1:block_size:length(audio)
     block = audio[:, i:min(i+block_size-1, end)]
-    output_block = process_block(plugin, block)
+    output_block = process(plugin, block)
     # Store output_block
 end
 ```
@@ -249,7 +256,7 @@ end
 # Process blocks of varying sizes (useful for low-latency)
 for block in [64, 128, 256, 512]
     input = randn(Float32, 2, block)
-    output = process_block(plugin, input)
+    output = process(plugin, input)
 end
 ```
 
@@ -260,10 +267,10 @@ block_size = 512
 
 # Schedule note at sample 256 of this block
 if should_trigger_note
-    send_note_on!(plugin, 0, note, velocity, 256)
+    noteon(plugin, 0, note, velocity, 256)
 end
 
-output = process_block(plugin, input)
+output = process(plugin, input)
 ```
 
 ## Type Reference
@@ -307,11 +314,11 @@ end
 
 ## Performance Tips
 
-1. **Reuse buffers**: Pre-allocate output buffers and use `process_block!`
+1. **Reuse buffers**: Pre-allocate output buffers and use `process!`
 2. **Appropriate block sizes**: 128-512 samples is typical
 3. **Avoid reallocations**: Use fixed-size blocks when possible
 4. **Parameter changes**: Set parameters before processing, not during
-5. **Activation**: Plugin is automatically activated on first `process_block`
+5. **Activation**: Plugin is automatically activated on first `process`
 
 ## Thread Safety
 
