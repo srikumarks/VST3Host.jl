@@ -77,6 +77,7 @@ struct CPluginInfo
     num_inputs::Int32
     num_outputs::Int32
     num_parameters::Int32
+    sample_rate::Float64
 end
 
 struct CParameterInfo
@@ -102,6 +103,7 @@ Information about a VST3 plugin.
 - `num_inputs::Int`: Number of input channels
 - `num_outputs::Int`: Number of output channels
 - `num_parameters::Int`: Number of parameters
+- `sample_rate::Float64`: Sample rate (Hz)
 """
 struct PluginInfo
     name::String
@@ -109,6 +111,7 @@ struct PluginInfo
     num_inputs::Int
     num_outputs::Int
     num_parameters::Int
+    sample_rate::Float64
 end
 
 """
@@ -242,7 +245,8 @@ function info(plugin::VST3Plugin)
         cstring_to_string(info_c[].vendor),
         info_c[].num_inputs,
         info_c[].num_outputs,
-        info_c[].num_parameters
+        info_c[].num_parameters,
+        info_c[].sample_rate
     )
 end
 
@@ -565,7 +569,7 @@ Compact display for VST3Plugin (one-line summary)
 """
 function Base.show(io::IO, plugin::VST3Plugin)
     plugin_info = info(plugin)
-    print(io, "VST3Plugin(\"$(plugin_info.name)\", $(plugin.sample_rate)Hz, $(plugin.block_size) samples)")
+    print(io, "VST3Plugin(\"$(plugin_info.name)\", $(plugin_info.sample_rate)Hz, $(plugin.block_size) samples)")
 end
 
 """
@@ -580,7 +584,7 @@ function Base.show(io::IO, ::MIME"text/plain", plugin::VST3Plugin)
     println(io, "Vendor: $(plugin_info.vendor)")
     println(io, "─"^70)
     println(io, "Configuration:")
-    println(io, "  Sample Rate: $(plugin.sample_rate) Hz")
+    println(io, "  Sample Rate: $(plugin_info.sample_rate) Hz")
     println(io, "  Block Size:  $(plugin.block_size) samples")
     println(io, "  Inputs:      $(plugin_info.num_inputs) channels")
     println(io, "  Outputs:     $(plugin_info.num_outputs) channels")
@@ -627,7 +631,7 @@ function Base.show(io::IO, ::MIME"text/html", plugin::VST3Plugin)
 
     println(io, "<table style='width: 100%; border-collapse: collapse; margin: 10px 0;'>")
     println(io, "<tr><th style='text-align: left; padding: 5px; background: #f0f0f0;'>Configuration</th><th style='text-align: left; padding: 5px; background: #f0f0f0;'>Value</th></tr>")
-    println(io, "<tr><td style='padding: 5px;'>Sample Rate</td><td style='padding: 5px;'>$(plugin.sample_rate) Hz</td></tr>")
+    println(io, "<tr><td style='padding: 5px;'>Sample Rate</td><td style='padding: 5px;'>$(plugin_info.sample_rate) Hz</td></tr>")
     println(io, "<tr><td style='padding: 5px;'>Block Size</td><td style='padding: 5px;'>$(plugin.block_size) samples</td></tr>")
     println(io, "<tr><td style='padding: 5px;'>Inputs</td><td style='padding: 5px;'>$(plugin_info.num_inputs) channels</td></tr>")
     println(io, "<tr><td style='padding: 5px;'>Outputs</td><td style='padding: 5px;'>$(plugin_info.num_outputs) channels</td></tr>")

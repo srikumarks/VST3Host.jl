@@ -125,6 +125,7 @@ struct PluginInfo
     num_inputs::Int
     num_outputs::Int
     num_parameters::Int
+    sample_rate::Float64
 end
 ```
 

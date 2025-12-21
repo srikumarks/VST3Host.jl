@@ -109,6 +109,7 @@ Get basic plugin information.
 - `num_inputs::Int`
 - `num_outputs::Int`
 - `num_parameters::Int`
+- `sample_rate::Float64`
 
 #### Display Plugin Info
 Simply type `plugin` in the REPL or use `display(plugin)` to see:
@@ -283,6 +284,7 @@ struct PluginInfo
     num_inputs::Int
     num_outputs::Int
     num_parameters::Int
+    sample_rate::Float64
 end
 ```
 
