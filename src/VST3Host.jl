@@ -211,14 +211,35 @@ mutable struct VST3Plugin
                     info_c[].num_inputs, info_c[].num_outputs, false)
 
         finalizer(plugin) do p
-            if p.active
-                deactivate!(p)
+            if p.handle != C_NULL
+                if p.active
+                    deactivate!(p)
+                end
+                ccall((:vst3_unload_plugin, libvst3), Cvoid, (Ptr{Cvoid},), p.handle)
+                p.handle = C_NULL
             end
-            ccall((:vst3_unload_plugin, libvst3), Cvoid, (Ptr{Cvoid},), p.handle)
         end
 
         return plugin
     end
+end
+
+"""
+    close(plugin::VST3Plugin)
+
+Cleanup and unload the plugin. Deactivates the plugin if active and releases resources.
+
+This is called automatically by the finalizer, but can be called explicitly for immediate cleanup.
+"""
+function Base.close(plugin::VST3Plugin)
+    if plugin.handle != C_NULL
+        if plugin.active
+            deactivate!(plugin)
+        end
+        ccall((:vst3_unload_plugin, libvst3), Cvoid, (Ptr{Cvoid},), plugin.handle)
+        plugin.handle = C_NULL
+    end
+    return nothing
 end
 
 # Helper to convert C string to Julia string
