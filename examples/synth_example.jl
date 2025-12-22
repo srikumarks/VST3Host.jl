@@ -1,5 +1,6 @@
 using VST3Host
 using WAV
+using SampledSignals
 
 """
 Example: MIDI note processing with a VST3 synthesizer
@@ -33,7 +34,7 @@ function generate_melody(synth_path::String, output_file::String;
     output = zeros(Float32, plugin_info.num_outputs, num_samples)
 
     # Prepare silent input (synth generates audio from MIDI)
-    input = zeros(Float32, max(plugin_info.num_inputs, 1), block_size)
+    input_data = zeros(Float32, max(plugin_info.num_inputs, 1), block_size)
 
     # Activate plugin
     activate!(plugin)
@@ -72,10 +73,12 @@ function generate_melody(synth_path::String, output_file::String;
         block_end = min(current_sample + block_size, num_samples)
         actual_block_size = block_end - block_start + 1
 
+        input = SampleBuf(input_data, sample_rate)
         output_block = process(plugin, input)
 
         # Copy to output
-        output[:, block_start:block_end] = output_block[:, 1:actual_block_size]
+        output_data = Array(output_block)
+        output[:, block_start:block_end] = output_data[:, 1:actual_block_size]
 
         current_sample += block_size
     end

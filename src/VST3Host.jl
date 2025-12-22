@@ -13,6 +13,7 @@ Julia package for hosting VST3 audio plugins with block-based processing and eve
 # Example
 ```julia
 using VST3Host
+using SampledSignals
 
 # Load plugin
 plugin = VST3Plugin("/Library/Audio/Plug-Ins/VST3/MyPlugin.vst3", 44100.0, 512)
@@ -24,8 +25,9 @@ params = parameters(plugin)
 # Set parameter
 setparameter!(plugin, 0, 0.5)
 
-# Process audio block
-input = randn(Float32, 2, 512)  # 2 channels, 512 samples
+# Process audio block with SampleBuf
+sr = 44100.0  # sample rate
+input = SampleBuf(randn(Float32, 2, 512), sr)  # 2 channels, 512 samples
 output = process(plugin, input)
 
 # Send MIDI events
@@ -55,6 +57,7 @@ export noteon, noteoff, controlchange, programchange
 export formatparameter, isdiscrete
 
 using Printf
+using SampledSignals
 
 # Find the shared library
 const libvst3 = let
@@ -370,38 +373,65 @@ Returns output with (num_outputs × samples).
 
 Automatically activates the plugin if not already active.
 """
-function process(plugin::VST3Plugin, input::Matrix{Float32})
-    num_samples = size(input, 2)
-    output = zeros(Float32, plugin.num_outputs, num_samples)
+"""
+    process(plugin::VST3Plugin, input::SampleBuf{Float32})
+
+Process a buffer of audio and return output as SampleBuf.
+
+# Arguments
+- `input::SampleBuf{Float32}`: Input audio buffer
+- Returns output as a new SampleBuf with shape (num_outputs, num_samples)
+"""
+function process(plugin::VST3Plugin, input::SampleBuf{Float32})
+    num_samples = nsamples(input)
+    sr = samplerate(input)
+    output = SampleBuf(zeros(Float32, plugin.num_outputs, num_samples), sr)
     process!(plugin, input, output)
     return output
 end
 
+# Convenience overload for Matrix for backward compatibility
+function process(plugin::VST3Plugin, input::Matrix{Float32})
+    num_samples = size(input, 2)
+    # Use plugin's sample rate as default
+    sr = plugin.sample_rate
+    sample_buf = SampleBuf(input, sr)
+    output_buf = process(plugin, sample_buf)
+    return Array(output_buf)
+end
+
 """
-    process!(plugin::VST3Plugin, input::Matrix{Float32}, output::Matrix{Float32})
+    process!(plugin::VST3Plugin, input::SampleBuf{Float32}, output::SampleBuf{Float32})
 
 Process audio in-place, writing to pre-allocated output buffer.
 
 Automatically activates the plugin if not already active.
+
+# Arguments
+- `input::SampleBuf{Float32}`: Input audio buffer
+- `output::SampleBuf{Float32}`: Output buffer (will be filled with processed audio)
 """
-function process!(plugin::VST3Plugin, input::Matrix{Float32}, output::Matrix{Float32})
-    @assert size(input, 2) == size(output, 2) "Input and output must have same number of samples"
-    @assert size(input, 2) <= plugin.block_size "Block size exceeds maximum"
-    @assert size(input, 1) <= plugin.num_inputs "Too many input channels"
-    @assert size(output, 1) <= plugin.num_outputs "Too many output channels"
+function process!(plugin::VST3Plugin, input::SampleBuf{Float32}, output::SampleBuf{Float32})
+    input_data = Array(input)
+    output_data = Array(output)
+
+    @assert size(input_data, 2) == size(output_data, 2) "Input and output must have same number of samples"
+    @assert size(input_data, 2) <= plugin.block_size "Block size exceeds maximum"
+    @assert size(input_data, 1) <= plugin.num_inputs "Too many input channels"
+    @assert size(output_data, 1) <= plugin.num_outputs "Too many output channels"
 
     # Auto-activate if needed
     if !plugin.active
         activate!(plugin)
     end
 
-    num_samples = size(input, 2)
-    num_in_channels = size(input, 1)
-    num_out_channels = size(output, 1)
+    num_samples = size(input_data, 2)
+    num_in_channels = size(input_data, 1)
+    num_out_channels = size(output_data, 1)
 
     # Create pointers to each channel
-    input_ptrs = [pointer(input, (i-1)*num_samples + 1) for i in 1:num_in_channels]
-    output_ptrs = [pointer(output, (i-1)*num_samples + 1) for i in 1:num_out_channels]
+    input_ptrs = [pointer(input_data, (i-1)*num_samples + 1) for i in 1:num_in_channels]
+    output_ptrs = [pointer(output_data, (i-1)*num_samples + 1) for i in 1:num_out_channels]
 
     ret = ccall((:vst3_process, libvst3), Int32,
                 (Ptr{Cvoid}, Ptr{Ptr{Float32}}, Ptr{Ptr{Float32}}, Int32, Int32, Int32),
@@ -411,6 +441,15 @@ function process!(plugin::VST3Plugin, input::Matrix{Float32}, output::Matrix{Flo
         error("Processing failed")
     end
 
+    return nothing
+end
+
+# Convenience overload for Matrix for backward compatibility
+function process!(plugin::VST3Plugin, input::Matrix{Float32}, output::Matrix{Float32})
+    sr = plugin.sample_rate
+    input_buf = SampleBuf(input, sr)
+    output_buf = SampleBuf(output, sr)
+    process!(plugin, input_buf, output_buf)
     return nothing
 end
 

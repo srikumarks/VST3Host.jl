@@ -1,5 +1,6 @@
 using VST3Host
 using WAV
+using SampledSignals
 
 """
 Example: Block-based audio processing with VST3 plugin
@@ -50,20 +51,22 @@ function process_audio_blocks(plugin_path::String, input_file::String, output_fi
         current_block_size = end_sample - start_sample + 1
 
         # Extract input block
-        input_block = audio[:, start_sample:end_sample]
+        input_block_data = audio[:, start_sample:end_sample]
 
         # Pad to block size if needed
         if current_block_size < block_size
             padded = zeros(Float32, num_channels, block_size)
-            padded[:, 1:current_block_size] = input_block
-            input_block = padded
+            padded[:, 1:current_block_size] = input_block_data
+            input_block_data = padded
         end
 
-        # Process block
+        # Create SampleBuf and process block
+        input_block = SampleBuf(input_block_data, Float64(fs))
         output_block = process(plugin, input_block)
 
-        # Copy to output (remove padding if any)
-        output[:, start_sample:end_sample] = output_block[:, 1:current_block_size]
+        # Convert output back to matrix and copy to output (remove padding if any)
+        output_data = Array(output_block)
+        output[:, start_sample:end_sample] = output_data[:, 1:current_block_size]
 
         # Progress indicator
         if block_idx % 100 == 0 || block_idx == num_blocks

@@ -1,4 +1,5 @@
 using VST3Host
+using SampledSignals
 
 """
 Example: Parameter automation during processing
@@ -35,7 +36,7 @@ function automate_parameters(plugin_path::String; duration_seconds::Float64=5.0,
 
     # Prepare input (silence)
     plugin_info = info(plugin)
-    input = zeros(Float32, plugin_info.num_inputs, block_size)
+    input_data = zeros(Float32, plugin_info.num_inputs, block_size)
 
     # Activate plugin
     activate!(plugin)
@@ -52,6 +53,7 @@ function automate_parameters(plugin_path::String; duration_seconds::Float64=5.0,
         setparameter!(plugin, param.id, param_value)
 
         # Process block
+        input = SampleBuf(input_data, sample_rate)
         output = process(plugin, input)
 
         # Print status every second

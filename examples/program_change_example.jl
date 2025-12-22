@@ -1,5 +1,6 @@
 using VST3Host
 using WAV
+using SampledSignals
 
 """
 Example: MIDI Program Change with VST3 synth
@@ -47,7 +48,7 @@ function test_program_change(synth_path::String, output_file::String;
 
     # Prepare output buffer
     output = zeros(Float32, plugin_info.num_outputs, num_samples)
-    input = zeros(Float32, max(plugin_info.num_inputs, 1), block_size)
+    input_data = zeros(Float32, max(plugin_info.num_inputs, 1), block_size)
 
     # Activate plugin
     activate!(plugin)
@@ -88,12 +89,14 @@ function test_program_change(synth_path::String, output_file::String;
             block_end = min(current_sample + block_size, end_sample)
             actual_block_size = block_end - block_start + 1
 
+            input = SampleBuf(input_data, sample_rate)
             output_block = process(plugin, input)
 
             # Copy to output
             if block_start <= num_samples
                 copy_end = min(block_end, num_samples)
-                output[:, block_start:copy_end] = output_block[:, 1:(copy_end - block_start + 1)]
+                output_data = Array(output_block)
+                output[:, block_start:copy_end] = output_data[:, 1:(copy_end - block_start + 1)]
             end
 
             current_sample += block_size
@@ -104,6 +107,7 @@ function test_program_change(synth_path::String, output_file::String;
 
         # Process a bit more to let note decay
         for _ in 1:4
+            input = SampleBuf(input_data, sample_rate)
             process(plugin, input)
         end
 

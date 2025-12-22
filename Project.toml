@@ -5,6 +5,7 @@ authors = ["VST3 Host Project"]
 
 [deps]
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SampledSignals = "bd7594eb-a658-542f-9e75-262c90feadd1"
 WAV = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
 
 [compat]

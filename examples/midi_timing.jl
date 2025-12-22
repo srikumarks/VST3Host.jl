@@ -1,4 +1,5 @@
 using VST3Host
+using SampledSignals
 
 """
 Example: MIDI event timing and offset computation
@@ -32,7 +33,7 @@ function schedule_midi_events(plugin_path::String; sample_rate::Float64=44100.0,
     num_blocks = div(num_samples, block_size)
 
     output = zeros(Float32, plugin_info.num_outputs, num_samples)
-    input = zeros(Float32, plugin_info.num_inputs, block_size)
+    input_data = zeros(Float32, plugin_info.num_inputs, block_size)
 
     activate!(plugin)
 
@@ -64,8 +65,10 @@ function schedule_midi_events(plugin_path::String; sample_rate::Float64=44100.0,
         end
 
         # Process block
+        input = SampleBuf(input_data, sample_rate)
         output_block = process(plugin, input)
-        output[:, current_sample+1:current_sample+block_size] = output_block
+        output_data = Array(output_block)
+        output[:, current_sample+1:current_sample+block_size] = output_data
 
         current_sample += block_size
     end
@@ -96,7 +99,7 @@ function event_driven_scheduling(plugin_path::String; sample_rate::Float64=44100
     num_blocks = div(total_samples, block_size)
 
     output = zeros(Float32, plugin_info.num_outputs, total_samples)
-    input = zeros(Float32, plugin_info.num_inputs, block_size)
+    input_data = zeros(Float32, plugin_info.num_inputs, block_size)
 
     activate!(plugin)
 
@@ -127,8 +130,10 @@ function event_driven_scheduling(plugin_path::String; sample_rate::Float64=44100
         end
 
         # Process block
+        input = SampleBuf(input_data, sample_rate)
         output_block = process(plugin, input)
-        output[:, current_sample+1:current_sample+block_size] = output_block
+        output_data = Array(output_block)
+        output[:, current_sample+1:current_sample+block_size] = output_data
 
         current_sample += block_size
     end

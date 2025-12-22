@@ -47,6 +47,7 @@ Pkg.add("WAV")
 
 ```julia
 using VST3Host
+using SampledSignals
 
 # Load a plugin
 plugin = VST3Plugin("/path/to/plugin.vst3", 44100.0, 512)
@@ -57,8 +58,9 @@ plugin  # Shows full info with all parameters
 # Set a parameter (normalized 0-1)
 setparameter!(plugin, 0, 0.5)
 
-# Process audio (2 channels × 512 samples)
-input = randn(Float32, 2, 512)
+# Process audio (2 channels × 512 samples) with SampleBuf
+sr = 44100.0
+input = SampleBuf(randn(Float32, 2, 512), sr)
 output = process(plugin, input)
 
 # Send MIDI
@@ -156,32 +158,40 @@ Check if parameter is discrete (vs. continuous).
 
 ### Audio Processing
 
-#### `process(plugin, input) -> Matrix{Float32}`
+#### `process(plugin, input) -> SampleBuf{Float32}`
 Process a block of audio and return output.
 
 **Arguments:**
-- `input::Matrix{Float32}`: Input audio (channels × samples)
+- `input::SampleBuf{Float32}`: Input audio buffer with sample rate metadata
 
-**Returns:** Output audio (num_outputs × samples)
+**Returns:** Output audio as SampleBuf with shape (num_outputs × num_samples)
 
 **Notes:**
 - Block size must be ≤ `plugin.block_size`
 - Automatically activates plugin if needed
 - Input channels should match plugin's `num_inputs`
+- Input and output preserve sample rate information
 
 **Example:**
 ```julia
-# Process 128 samples
-input = randn(Float32, 2, 128)
+# Process 128 samples at 44100 Hz
+sr = 44100.0
+input = SampleBuf(randn(Float32, 2, 128), sr)
 output = process(plugin, input)
+
+# For backward compatibility, Matrix{Float32} still works:
+input_matrix = randn(Float32, 2, 128)
+output = process(plugin, input_matrix)  # Returns Matrix{Float32}
 ```
 
 #### `process!(plugin, input, output)`
 Process audio in-place (modifies `output`).
 
 **Arguments:**
-- `input::Matrix{Float32}`: Input (channels × samples)
-- `output::Matrix{Float32}`: Output buffer (pre-allocated)
+- `input::SampleBuf{Float32}`: Input audio buffer
+- `output::SampleBuf{Float32}`: Output buffer (pre-allocated, will be modified)
+
+**Note:** Also accepts `Matrix{Float32}` for backward compatibility
 
 ### MIDI Events
 
