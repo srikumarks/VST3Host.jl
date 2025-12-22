@@ -366,14 +366,6 @@ function deactivate!(plugin::VST3Plugin)
 end
 
 """
-    process(plugin::VST3Plugin, input::Matrix{Float32}) -> Matrix{Float32}
-
-Process audio block. Input should be (channels × samples).
-Returns output with (num_outputs × samples).
-
-Automatically activates the plugin if not already active.
-"""
-"""
     process(plugin::VST3Plugin, input::SampleBuf{Float32})
 
 Process a buffer of audio and return output as SampleBuf.
