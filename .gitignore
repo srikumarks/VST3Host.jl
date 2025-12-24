@@ -1,1 +1,6 @@
 Manifest.toml
+
+# Build artifacts
+lib/vst3sdk/
+lib/*.o
+lib/libvst3host.dylib

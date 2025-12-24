@@ -5,11 +5,11 @@ CXX = g++
 # Build universal binary for both Intel and Apple Silicon
 # This allows Julia (arm64) to load the library while still supporting x86_64 plugins via Rosetta
 ARCH_FLAGS = -arch x86_64 -arch arm64
-CFLAGS = -Wall -Wextra -O2 -fPIC -I../.. $(ARCH_FLAGS)
-CXXFLAGS = -Wall -Wextra -O2 -std=c++17 -fPIC -I../.. -DRELEASE=1 -DSMTG_CPP17=1 $(ARCH_FLAGS)
+CFLAGS = -Wall -Wextra -O2 -fPIC -I. $(ARCH_FLAGS)
+CXXFLAGS = -Wall -Wextra -O2 -std=c++17 -fPIC -I. -DRELEASE=1 -DSMTG_CPP17=1 $(ARCH_FLAGS)
 LDFLAGS = -shared -ldl -framework CoreFoundation -framework Cocoa $(ARCH_FLAGS)
 
-VST3_SDK_PATH = ../../vst3sdk
+VST3_SDK_PATH = ../vst3sdk
 
 CXXFLAGS += -I$(VST3_SDK_PATH) \
             -I$(VST3_SDK_PATH)/pluginterfaces \
@@ -20,7 +20,7 @@ CXXFLAGS += -I$(VST3_SDK_PATH) \
 TARGET = libvst3host.dylib
 
 # Source files
-SOURCES = ../../vst3_host.cpp ../../vst_iids.cpp
+SOURCES = vst3_host.cpp vst_iids.cpp
 
 # VST3 SDK source files
 VST3_SOURCES = \
